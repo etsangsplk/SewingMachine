@@ -2,7 +2,7 @@
 
 # Sewing Machine
 
-Sewing Machine is a library extending capabilities of Azure Service Fabric services in various ways. It's focused on speed and performance, but also aims and delivering more approaches build on top of powerful Service Fabric foundations.
+Sewing Machine is a library extending capabilities of Azure Service Fabric services in various ways. It's focused on speed and performance, but also aims at delivering more capabilities build on top of the powerful Service Fabric foundations.
 
 
 ## Icon
