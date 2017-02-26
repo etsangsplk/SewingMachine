@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -40,12 +42,25 @@ namespace TestActor
             return Completed;
         }
 
-        public async Task When_value_Added_should_Get_it(CancellationToken cancellationToken)
+        public async Task When_Add_should_Get_value(CancellationToken cancellationToken)
         {
             const string expected = "Value";
             var unsafeKey = await Add(_key, expected);
 
             AssertGet(unsafeKey, expected, _key);
+        }
+
+        public async Task When_TryAdd_should_fail_on_existing_key(CancellationToken cancellationToken)
+        {
+            const string expected = "Value";
+            await Add(_key, expected);
+
+            using (var tx = RawStore.BeginTransaction())
+            {
+                IntPtr
+                    unsafeKey;
+                Assert.False(RawStore.TryAdd(tx, Create(_key, expected, out unsafeKey)));
+            }
         }
 
         public Task When_TryRemove_non_existent_value_should_not_fail(CancellationToken cancellationToken)
@@ -114,6 +129,37 @@ namespace TestActor
             }
 
             AssertGet(unsafeKey, "Value", _key);
+        }
+
+        public async Task When_Enumerate_should_go_through_all_prefixed_value(CancellationToken cancellationToken)
+        {
+            const string expected = "Value";
+            var unsafeKey = await Add(_key, expected);
+            await Add(_key + "1", expected);
+            await Add(_key + "2", expected);
+
+            using (var tx = RawStore.BeginTransaction())
+            {
+                unsafe
+                {
+                    var results = new List<object>();
+                    RawStore.Enumerate(tx, (char*)unsafeKey, Map, o => results.Add(o));
+
+                    var array = results.Cast<Item>().OrderBy(i => i.Key).ToArray();
+
+                    Assert.AreEqual(3, array.Length);
+
+                    Assert.AreEqual(_key, array[0].Key);
+                    Assert.AreEqual(expected, array[0].Value);
+
+                    Assert.AreEqual(_key + "1", array[1].Key);
+                    Assert.AreEqual(expected, array[1].Value);
+
+                    Assert.AreEqual(_key + "2", array[2].Key);
+                    Assert.AreEqual(expected, array[2].Value);
+
+                }
+            }
         }
 
         async Task<IntPtr> Add(string key, string expected)
