@@ -2,8 +2,8 @@
 <ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="TestAppType" ApplicationTypeVersion="1.0.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="TestActorService_PartitionCount" DefaultValue="10" />
-    <Parameter Name="TestActorService_MinReplicaSetSize" DefaultValue="3" />
-    <Parameter Name="TestActorService_TargetReplicaSetSize" DefaultValue="3" />
+    <Parameter Name="TestActorService_MinReplicaSetSize" DefaultValue="1" />
+    <Parameter Name="TestActorService_TargetReplicaSetSize" DefaultValue="1" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 

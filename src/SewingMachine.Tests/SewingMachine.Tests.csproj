@@ -101,12 +101,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ActorTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SewingMachine\SewingMachine.csproj">
       <Project>{f80d6104-5260-4a39-ac12-031f5f653a6d}</Project>
       <Name>SewingMachine</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TestActor.Interfaces\TestActor.Interfaces.csproj">
+      <Project>{0e6e521d-0fc1-474a-8fc2-9a55bc05f15a}</Project>
+      <Name>TestActor.Interfaces</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
