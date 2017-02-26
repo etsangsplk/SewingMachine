@@ -13,17 +13,9 @@ namespace TestActor
     [StatePersistence(StatePersistence.Persisted)]
     class TestActor : RawStatePersistentActor, ITestActor
     {
+        static long _callCounter;
         static readonly Task<int> Completed = Task.FromResult(0);
-        static unsafe char* A1 = (char*)Marshal.StringToHGlobalUni("A1");
-        static unsafe char* A2 = (char*)Marshal.StringToHGlobalUni("A2");
-        static unsafe char* B = (char*)Marshal.StringToHGlobalUni("B");
-
-        const string V = "Value";
-        static unsafe char* Value = (char*)Marshal.StringToHGlobalUni(V);
-        static unsafe ReplicaKeyValue A1_Value = new ReplicaKeyValue(A1, (byte*)Value, (V.Length + 1) * 2);
-        static unsafe ReplicaKeyValue A2_Value = new ReplicaKeyValue(A2, (byte*)Value, (V.Length + 1) * 2);
-        static unsafe ReplicaKeyValue B_Value = new ReplicaKeyValue(A2, (byte*)Value, (V.Length + 1) * 2);
-
+        string _key;
 
         public TestActor(ActorService actorService, ActorId actorId)
             : base(actorService, actorId)
@@ -34,6 +26,12 @@ namespace TestActor
             return Completed;
         }
 
+        protected override Task OnPreActorMethodAsync(ActorMethodContext actorMethodContext)
+        {
+            _key = Interlocked.Increment(ref _callCounter).ToString();
+            return base.OnPreActorMethodAsync(actorMethodContext);
+        }
+
         public Task When_accessing_StateManager_should_throw(CancellationToken cancellationToken)
         {
             Assert.ThrowsAsync<InvalidOperationException>(
@@ -42,26 +40,76 @@ namespace TestActor
             return Completed;
         }
 
-        public async Task When_value_added_should_get_it(CancellationToken cancellationToken)
+        public async Task When_value_Added_should_Get_it(CancellationToken cancellationToken)
         {
-            using (var tx = RawStore.BeginTransaction())
-            {
-                RawStore.Add(tx, A1_Value);
-                await tx.CommitAsync().ConfigureAwait(false);
-            }
+            const string expected = "Value";
+            var unsafeKey = await Add(_key, expected);
+
+            AssertGet(unsafeKey, expected, _key);
+        }
+
+        public Task When_TryRemove_non_existent_value_should_not_fail(CancellationToken cancellationToken)
+        {
+            IntPtr unsafeKey;
+            Create(_key, "Value", out unsafeKey);
 
             using (var tx = RawStore.BeginTransaction())
             {
                 unsafe
                 {
-                    var item = (Item)RawStore.TryGet(tx, A1, Map);
-
-                    Assert.NotNull(item);
-
-                    Assert.AreEqual("Value", item.Value);
-                    Assert.AreEqual("A1", item.Key);
+                    Assert.False(RawStore.TryRemove(tx, (char*)unsafeKey, 0), "Should not remove non-existing entry");
                 }
             }
+
+            return Completed;
+        }
+
+        public Task When_Remove_non_existent_value_should_throw(CancellationToken cancellationToken)
+        {
+            IntPtr unsafeKey;
+            Create(_key, "Value", out unsafeKey);
+
+            using (var tx = RawStore.BeginTransaction())
+            {
+                unsafe
+                {
+                    Assert.Throws(Is.AssignableTo<Exception>(), () => RawStore.Remove(tx, (char*)unsafeKey, 0), "Should not remove non-existing entry");
+                }
+            }
+
+            return Completed;
+        }
+
+        async Task<IntPtr> Add(string key, string expected)
+        {
+            IntPtr unsafeKey;
+            using (var tx = RawStore.BeginTransaction())
+            {
+                RawStore.Add(tx, Create(key, expected, out unsafeKey));
+                await tx.CommitAsync().ConfigureAwait(false);
+            }
+            return unsafeKey;
+        }
+
+        unsafe void AssertGet(IntPtr unsafeKey, string expected, string key)
+        {
+            using (var tx = RawStore.BeginTransaction())
+            {
+                var item = (Item) RawStore.TryGet(tx, (char*) unsafeKey, Map);
+
+                Assert.NotNull(item);
+
+                Assert.AreEqual(expected, item.Value);
+                Assert.AreEqual(key, item.Key);
+            }
+        }
+
+        static unsafe ReplicaKeyValue Create(string key, string value, out IntPtr unsafeKey)
+        {
+            unsafeKey = Marshal.StringToHGlobalUni(key);
+            var k = (char*)unsafeKey;
+            var v = (char*)Marshal.StringToHGlobalUni(value);
+            return new ReplicaKeyValue(k, (byte*)v, (value.Length + 1) * 2);
         }
 
         static unsafe object Map(RawAccessorToKeyValueStoreReplica.RawItem arg)

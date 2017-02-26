@@ -57,7 +57,7 @@ namespace SewingMachine
             Helper.Remove(_store, tx, new IntPtr(key), expectedVersion);
         }
 
-        public unsafe bool TryUpdate(TransactionBase tx, char* key, long expectedVersion)
+        public unsafe bool TryRemove(TransactionBase tx, char* key, long expectedVersion)
         {
             return Helper.TryRemove(_store, tx, new IntPtr(key), expectedVersion) == True;
         }
