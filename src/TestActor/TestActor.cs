@@ -80,6 +80,42 @@ namespace TestActor
             return Completed;
         }
 
+        public async Task When_Update_existent_value_should_replace(CancellationToken cancellationToken)
+        {
+            var unsafeKey = await Add(_key, "Value");
+
+            using (var tx = RawStore.BeginTransaction())
+            {
+                unsafe
+                {
+                    var item = (Item)RawStore.TryGet(tx, (char*)unsafeKey, Map);
+                    RawStore.Update(tx, Create(_key, "V", out unsafeKey), item.SequenceNumber);
+                }
+
+                await tx.CommitAsync();
+            }
+
+            AssertGet(unsafeKey, "V", _key);
+        }
+
+        public async Task When_TryUpdate_existent_value_with_wrong_version_should_throw(CancellationToken cancellationToken)
+        {
+            var unsafeKey = await Add(_key, "Value");
+
+            using (var tx = RawStore.BeginTransaction())
+            {
+                unsafe
+                {
+                    var item = (Item)RawStore.TryGet(tx, (char*)unsafeKey, Map);
+                    Assert.Throws<COMException>(() => RawStore.TryUpdate(tx, Create(_key, "V", out unsafeKey), item.SequenceNumber + 1));
+                }
+
+                await tx.CommitAsync();
+            }
+
+            AssertGet(unsafeKey, "Value", _key);
+        }
+
         async Task<IntPtr> Add(string key, string expected)
         {
             IntPtr unsafeKey;
@@ -95,7 +131,7 @@ namespace TestActor
         {
             using (var tx = RawStore.BeginTransaction())
             {
-                var item = (Item) RawStore.TryGet(tx, (char*) unsafeKey, Map);
+                var item = (Item)RawStore.TryGet(tx, (char*)unsafeKey, Map);
 
                 Assert.NotNull(item);
 

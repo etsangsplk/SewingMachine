@@ -42,7 +42,7 @@ namespace SewingMachine.Tests
 
             var actor = ActorProxy.Create<ITestActor>(actorId, ActorUri);
 
-            return (Task) info.Invoke(actor, new object[] {CancellationToken.None});
+            return (Task)info.Invoke(actor, new object[] { CancellationToken.None });
         }
 
         [OneTimeTearDown]
@@ -61,7 +61,7 @@ namespace SewingMachine.Tests
         {
             foreach (var method in typeof(ITestActor).GetMethods())
             {
-                var testCaseData = new TestCaseData(method) {TestName = method.Name};
+                var testCaseData = new TestCaseData(method) { TestName = method.Name.Replace("_", " ") };
                 yield return testCaseData;
             }
         }
