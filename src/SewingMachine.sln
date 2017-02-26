@@ -6,6 +6,10 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SewingMachine", "SewingMachine\SewingMachine.csproj", "{F80D6104-5260-4A39-AC12-031F5F653A6D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SewingMachine.Tests", "SewingMachine.Tests\SewingMachine.Tests.csproj", "{F7D9C9BF-6014-416F-A7DC-BE4FB1866022}"
+	ProjectSection(ProjectDependencies) = postProject
+		{097C3508-009D-4D45-B20A-28D409EF652A} = {097C3508-009D-4D45-B20A-28D409EF652A}
+		{6EA32160-39CA-4070-A76A-20FCF88856F2} = {6EA32160-39CA-4070-A76A-20FCF88856F2}
+	EndProjectSection
 EndProject
 Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "TestApp", "TestApp\TestApp.sfproj", "{6EA32160-39CA-4070-A76A-20FCF88856F2}"
 EndProject

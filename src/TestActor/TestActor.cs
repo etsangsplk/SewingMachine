@@ -1,53 +1,87 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
-using Microsoft.ServiceFabric.Actors.Client;
+using NUnit.Framework;
+using SewingMachine;
 using TestActor.Interfaces;
 
 namespace TestActor
 {
-    /// <remarks>
-    /// This class represents an actor.
-    /// Every ActorID maps to an instance of this class.
-    /// The StatePersistence attribute determines persistence and replication of actor state:
-    ///  - Persisted: State is written to disk and replicated.
-    ///  - Volatile: State is kept in memory only and replicated.
-    ///  - None: State is kept in memory only and not replicated.
-    /// </remarks>
     [StatePersistence(StatePersistence.Persisted)]
-    internal class TestActor : Actor, ITestActor
+    class TestActor : RawStatePersistentActor, ITestActor
     {
-        /// <summary>
-        /// Initializes a new instance of TestActor
-        /// </summary>
-        /// <param name="actorService">The Microsoft.ServiceFabric.Actors.Runtime.ActorService that will host this actor instance.</param>
-        /// <param name="actorId">The Microsoft.ServiceFabric.Actors.ActorId for this actor instance.</param>
+        static readonly Task<int> Completed = Task.FromResult(0);
+        static unsafe char* A1 = (char*)Marshal.StringToHGlobalUni("A1");
+        static unsafe char* A2 = (char*)Marshal.StringToHGlobalUni("A2");
+        static unsafe char* B = (char*)Marshal.StringToHGlobalUni("B");
+
+        const string V = "Value";
+        static unsafe char* Value = (char*)Marshal.StringToHGlobalUni(V);
+        static unsafe ReplicaKeyValue A1_Value = new ReplicaKeyValue(A1, (byte*)Value, (V.Length + 1) * 2);
+        static unsafe ReplicaKeyValue A2_Value = new ReplicaKeyValue(A2, (byte*)Value, (V.Length + 1) * 2);
+        static unsafe ReplicaKeyValue B_Value = new ReplicaKeyValue(A2, (byte*)Value, (V.Length + 1) * 2);
+
+
         public TestActor(ActorService actorService, ActorId actorId)
             : base(actorService, actorId)
-        {
-        }
+        { }
 
-        /// <summary>
-        /// This method is called whenever an actor is activated.
-        /// An actor is activated the first time any of its methods are invoked.
-        /// </summary>
         protected override Task OnActivateAsync()
         {
-            ActorEventSource.Current.ActorMessage(this, "Actor activated.");
-            return this.StateManager.TryAddStateAsync("count", 0);
+            return Completed;
         }
 
-        /// <summary>
-        /// TODO: Replace with your own actor method.
-        /// </summary>
-        /// <returns></returns>
-        Task<int> ITestActor.GetCountAsync(CancellationToken cancellationToken)
+        public Task When_accessing_StateManager_should_throw(CancellationToken cancellationToken)
         {
-            return this.StateManager.GetStateAsync<int>("count", cancellationToken);
+            Assert.ThrowsAsync<InvalidOperationException>(
+                () => StateManager.GetStateAsync<int>("count", cancellationToken));
+
+            return Completed;
+        }
+
+        public async Task When_value_added_should_get_it(CancellationToken cancellationToken)
+        {
+            using (var tx = RawStore.BeginTransaction())
+            {
+                RawStore.Add(tx, A1_Value);
+                await tx.CommitAsync().ConfigureAwait(false);
+            }
+
+            using (var tx = RawStore.BeginTransaction())
+            {
+                unsafe
+                {
+                    var item = (Item)RawStore.TryGet(tx, A1, Map);
+
+                    Assert.NotNull(item);
+
+                    Assert.AreEqual("Value", item.Value);
+                    Assert.AreEqual("A1", item.Key);
+                }
+            }
+        }
+
+        static unsafe object Map(RawAccessorToKeyValueStoreReplica.RawItem arg)
+        {
+            var value = new string((char*)arg.Value, 0, arg.ValueLength / 2 - 1);
+            var key = new string(arg.Key);
+
+            return new Item
+            {
+                Key = key,
+                Value = value,
+                SequenceNumber = arg.SequenceNumber
+            };
+        }
+
+        class Item
+        {
+            public string Value { get; set; }
+            public string Key { get; set; }
+            public long SequenceNumber { get; set; }
         }
     }
 }
