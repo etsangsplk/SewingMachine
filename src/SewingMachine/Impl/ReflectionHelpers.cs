@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Reflection;
 
-namespace SewingMachine
+namespace SewingMachine.Impl
 {
     static class ReflectionHelpers
     {

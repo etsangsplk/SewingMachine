@@ -1,11 +1,16 @@
-﻿using System.Fabric;
+﻿using System;
+using System.Fabric;
 using System.Linq;
 using System.Reflection;
 
-namespace SewingMachine
+namespace SewingMachine.Impl
 {
     static class InternalFabric
     {
+        static Assembly InternalAssembly =
+            Assembly.Load(
+                "Microsoft.ServiceFabric.Internal, Version=5.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35");
+
         public static readonly TypeInfo NativeRuntimeType = typeof(KeyValueStoreReplica)
             .Assembly.DefinedTypes
             .Single(t => t.Name == "NativeRuntime");
@@ -33,5 +38,8 @@ namespace SewingMachine
         public static readonly TypeInfo KeyValueStoreItemType = NativeTypes.DeclaredNestedTypes.Single(t => t.Name == "FABRIC_KEY_VALUE_STORE_ITEM");
 
         public static readonly TypeInfo KeyValueStoreItemMetadataType = NativeTypes.DeclaredNestedTypes.Single(t => t.Name == "FABRIC_KEY_VALUE_STORE_ITEM_METADATA");
+
+        public static Action<string, bool> FabricDirectory_Delete = Utils.BuildStatic<string, bool>(InternalAssembly.GetType("System.Fabric.Common.FabricDirectory"), "Delete");
+        public static Action<string> FabricDirectory_CreateDirectory = Utils.BuildStatic<string>(InternalAssembly.GetType("System.Fabric.Common.FabricDirectory"), "Delete");
     }
 }

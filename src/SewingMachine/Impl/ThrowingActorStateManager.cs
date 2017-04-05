@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.ServiceFabric.Data;
 
-namespace SewingMachine
+namespace SewingMachine.Impl
 {
     class ThrowingActorStateManager : IActorStateManager
     {

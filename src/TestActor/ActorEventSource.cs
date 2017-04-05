@@ -160,7 +160,7 @@ namespace TestActor
                 }
                 else
                 {
-                    return (s.Length + 1) * sizeof(char);
+                    return (s.ValueLength + 1) * sizeof(char);
                 }
             }
 #endif

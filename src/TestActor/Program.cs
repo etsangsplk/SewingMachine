@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using SewingMachine;
+using SewingMachine.Impl;
 
 namespace TestActor
 {

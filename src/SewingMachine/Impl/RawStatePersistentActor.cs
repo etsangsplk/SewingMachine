@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
 
-namespace SewingMachine
+namespace SewingMachine.Impl
 {
     /// <summary>
     /// The base class for actors accessing its state directly via <see cref="RawStore"/> instead of using <see cref="IActorStateManager"/>.
     /// </summary>
-    public abstract class RawStatePersistentActor : Actor
+    abstract class RawStatePersistentActor : Actor
     {
         static readonly FieldInfo ReplicaField;
 
@@ -49,8 +49,8 @@ namespace SewingMachine
                     var persistent = provider as KvsActorStateProvider;
                     if (persistent != null)
                     {
-                        var replica = (KeyValueStoreReplica) ReplicaField.GetValue(provider);
-                        ((RawStatePersistentActor) actor).SetReplica(replica);
+                        var replica = (KeyValueStoreReplica)ReplicaField.GetValue(provider);
+                        ((RawStatePersistentActor)actor).SetReplica(replica);
 
                         return new ThrowingActorStateManager();
                     }

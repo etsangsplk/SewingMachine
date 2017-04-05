@@ -1,6 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="TestAppType" ApplicationTypeVersion="1.0.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
+    <Parameter Name="TestKeyValueStateful_PartitionCount" DefaultValue="1" />
+    <Parameter Name="TestKeyValueStateful_MinReplicaSetSize" DefaultValue="3" />
+    <Parameter Name="TestKeyValueStateful_TargetReplicaSetSize" DefaultValue="3" />
     <Parameter Name="TestActorService_PartitionCount" DefaultValue="10" />
     <Parameter Name="TestActorService_MinReplicaSetSize" DefaultValue="1" />
     <Parameter Name="TestActorService_TargetReplicaSetSize" DefaultValue="1" />
@@ -9,9 +12,18 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="TestKeyValueStatefulPkg" ServiceManifestVersion="1.0.0" />
+    <ConfigOverrides />
+  </ServiceManifestImport>
+  <ServiceManifestImport>
     <ServiceManifestRef ServiceManifestName="TestActorPkg" ServiceManifestVersion="1.0.0" />
   </ServiceManifestImport>
   <DefaultServices>
+    <Service Name="TestKeyValueStateful">
+      <StatefulService ServiceTypeName="TestKeyValueStatefulType" TargetReplicaSetSize="[TestKeyValueStateful_TargetReplicaSetSize]" MinReplicaSetSize="[TestKeyValueStateful_MinReplicaSetSize]">
+        <UniformInt64Partition PartitionCount="[TestKeyValueStateful_PartitionCount]" LowKey="-9223372036854775808" HighKey="9223372036854775807" />
+      </StatefulService>
+    </Service>
     <Service Name="TestActorService" GeneratedIdRef="69a5a342-ac56-4d91-ae7c-b303de50a2f0|Persisted">
       <StatefulService ServiceTypeName="TestActorServiceType" TargetReplicaSetSize="[TestActorService_TargetReplicaSetSize]" MinReplicaSetSize="[TestActorService_MinReplicaSetSize]">
         <UniformInt64Partition PartitionCount="[TestActorService_PartitionCount]" LowKey="-9223372036854775808" HighKey="9223372036854775807" />
