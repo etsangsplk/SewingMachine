@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using SewingMachine.Impl;
 
 namespace SewingMachine
@@ -31,69 +32,114 @@ namespace SewingMachine
             this.store = store;
         }
 
-        public Transaction BeginTransaction()
+        public SewingSession OpenSession()
         {
-            return store.CreateTransaction();
+            return new SewingSession (store, store.CreateTransaction());
         }
 
-        public void Add(TransactionBase tx, ReplicaKeyValue kv)
+        public class SewingSession : IDisposable
         {
-            Helper.Add(store, tx, kv.Key, kv.ValueLength, kv.Value);
-        }
+            readonly KeyValueStoreReplica store;
+            Transaction tx;
+            List<Action<SewingSession>> beforeSave;
 
-        public bool TryAdd(TransactionBase tx, ReplicaKeyValue kv)
-        {
-            return Helper.TryAdd(store, tx, kv.Key, kv.ValueLength, kv.Value) == True;
-        }
-
-        public void Update(TransactionBase tx, ReplicaKeyValue kv, long expectedVersion)
-        {
-            Helper.Update(store, tx, kv.Key, kv.ValueLength, kv.Value, expectedVersion);
-        }
-
-        public bool TryUpdate(TransactionBase tx, ReplicaKeyValue kv, long expectedVersion)
-        {
-            return Helper.TryUpdate(store, tx, kv.Key, kv.ValueLength, kv.Value, expectedVersion) == True;
-        }
-
-        public void Remove(TransactionBase tx, IntPtr key, long expectedVersion)
-        {
-            Helper.Remove(store, tx, key, expectedVersion);
-        }
-
-        public bool TryRemove(TransactionBase tx, IntPtr key, long expectedVersion)
-        {
-            return Helper.TryRemove(store, tx, key, expectedVersion) == True;
-        }
-
-        public bool Contains(TransactionBase tx, IntPtr key)
-        {
-            return Helper.Contains(store, tx, key) == True;
-        }
-
-        public object TryGet(TransactionBase tx, IntPtr key, Func<RawItem, object> mapper)
-        {
-            return Helper.TryGet(store, tx, key, mapper);
-        }
-
-        public void Enumerate(TransactionBase tx, IntPtr prefix, Func<RawItem, object> mapper, Action<object> onValue)
-        {
-            object enumerator = null;
-            try
+            public SewingSession(KeyValueStoreReplica store, Transaction tx)
             {
-                enumerator = Helper.EnumerateByKey2(store, tx, prefix, True);
-
-                while (Helper.NativeEnumeratorTryMoveNext(enumerator) == True)
-                {
-                    var value = Helper.NativeEnumeratorGetCurrent(enumerator, mapper);
-                    if (value != null)
-                        onValue(value);
-                }
+                this.store = store;
+                this.tx = tx;
             }
-            finally
+
+            public void BeforeSave(Action<SewingSession> onSave)
             {
-                if (enumerator != null)
-                    Marshal.FinalReleaseComObject(enumerator);
+                if (beforeSave == null)
+                {
+                    beforeSave = new List<Action<SewingSession>>();
+                }
+
+                beforeSave.Add(onSave);
+            }
+
+            public async Task<long> SaveChangesAsync()
+            {
+                if (beforeSave != null)
+                {
+                    foreach (var action in beforeSave)
+                    {
+                        action(this);
+                    }
+                    beforeSave = null;
+                }
+
+                var position = await tx.CommitAsync();
+                Dispose();
+                return position;
+            }
+
+            public void Dispose()
+            {
+                tx?.Dispose();
+                tx = null;
+            }
+
+            public void Add(ReplicaKeyValue kv)
+            {
+                Helper.Add(store, tx, kv.Key, kv.ValueLength, kv.Value);
+            }
+
+            public bool TryAdd(ReplicaKeyValue kv)
+            {
+                return Helper.TryAdd(store, tx, kv.Key, kv.ValueLength, kv.Value) == True;
+            }
+
+            public void Update(ReplicaKeyValue kv, long expectedVersion)
+            {
+                Helper.Update(store, tx, kv.Key, kv.ValueLength, kv.Value, expectedVersion);
+            }
+
+            public bool TryUpdate(ReplicaKeyValue kv, long expectedVersion)
+            {
+                return Helper.TryUpdate(store, tx, kv.Key, kv.ValueLength, kv.Value, expectedVersion) == True;
+            }
+
+            public void Remove(IntPtr key, long expectedVersion)
+            {
+                Helper.Remove(store, tx, key, expectedVersion);
+            }
+
+            public bool TryRemove(IntPtr key, long expectedVersion)
+            {
+                return Helper.TryRemove(store, tx, key, expectedVersion) == True;
+            }
+
+            public bool Contains(IntPtr key)
+            {
+                return Helper.Contains(store, tx, key) == True;
+            }
+
+            public object TryGet(IntPtr key, Func<RawItem, object> mapper)
+            {
+                return Helper.TryGet(store, tx, key, mapper);
+            }
+
+            public void Enumerate(IntPtr prefix, Func<RawItem, object> mapper, Action<object> onValue)
+            {
+                object enumerator = null;
+                try
+                {
+                    enumerator = Helper.EnumerateByKey2(store, tx, prefix, True);
+
+                    while (Helper.NativeEnumeratorTryMoveNext(enumerator) == True)
+                    {
+                        var value = Helper.NativeEnumeratorGetCurrent(enumerator, mapper);
+                        if (value != null)
+                            onValue(value);
+                    }
+                }
+                finally
+                {
+                    if (enumerator != null)
+                        Marshal.FinalReleaseComObject(enumerator);
+                }
             }
         }
 

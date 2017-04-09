@@ -49,10 +49,10 @@ namespace TestKeyValueStateful
                 rkv = new ReplicaKeyValue(TestKey, new IntPtr((byte*)&i), 4);
             }
 
-            using (var tx = RawStoreReplica.BeginTransaction())
+            using (var tx = RawStoreReplica.OpenSession())
             {
-                RawStoreReplica.Add(tx, rkv);
-                await tx.CommitAsync();
+                tx.Add(rkv);
+                await tx.SaveChangesAsync();
             }
 
             while (true)
@@ -75,22 +75,22 @@ namespace TestKeyValueStateful
             }
 
             var sw = Stopwatch.StartNew();
-            using (var tx = RawStoreReplica.BeginTransaction())
+            using (var tx = RawStoreReplica.OpenSession())
             {
                 // ReSharper disable once ConvertClosureToMethodGroup
-                var item = (Tuple<long, int>)RawStoreReplica.TryGet(tx, TestKey, r => Parse(r));
+                var item = (Tuple<long, int>)tx.TryGet(TestKey, r => Parse(r));
 
                 if (item == null)
                 {
-                    RawStoreReplica.Add(tx, rkv);
+                    tx.Add(rkv);
                 }
                 else
                 {
                     i = item.Item2 + 1;
-                    RawStoreReplica.Update(tx, rkv, item.Item1);
+                    tx.Update(rkv, item.Item1);
                 }
 
-                await tx.CommitAsync();
+                await tx.SaveChangesAsync();
             }
 
             sw.Stop();

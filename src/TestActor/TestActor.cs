@@ -56,11 +56,10 @@ namespace TestActor
             const string expected = "Value";
             await Add(key, expected);
 
-            using (var tx = RawStore.BeginTransaction())
+            using (var tx = RawStore.OpenSession())
             {
-                IntPtr
-                    unsafeKey;
-                Assert.False(RawStore.TryAdd(tx, Create(key, expected, out unsafeKey)));
+                IntPtr unsafeKey;
+                Assert.False(tx.TryAdd(Create(key, expected, out unsafeKey)));
             }
         }
 
@@ -69,9 +68,9 @@ namespace TestActor
             IntPtr unsafeKey;
             Create(key, "Value", out unsafeKey);
 
-            using (var tx = RawStore.BeginTransaction())
+            using (var tx = RawStore.OpenSession())
             {
-                Assert.False(RawStore.TryRemove(tx, unsafeKey, 0), "Should not remove non-existing entry");
+                Assert.False(tx.TryRemove(unsafeKey, 0), "Should not remove non-existing entry");
             }
 
             return Completed;
@@ -82,9 +81,9 @@ namespace TestActor
             IntPtr unsafeKey;
             Create(key, "Value", out unsafeKey);
 
-            using (var tx = RawStore.BeginTransaction())
+            using (var tx = RawStore.OpenSession())
             {
-                Assert.Throws(Is.AssignableTo<Exception>(), () => RawStore.Remove(tx, unsafeKey, 0), "Should not remove non-existing entry");
+                Assert.Throws(Is.AssignableTo<Exception>(), () => tx.Remove(unsafeKey, 0), "Should not remove non-existing entry");
             }
 
             return Completed;
@@ -94,12 +93,12 @@ namespace TestActor
         {
             var unsafeKey = await Add(key, "Value");
 
-            using (var tx = RawStore.BeginTransaction())
+            using (var tx = RawStore.OpenSession())
             {
-                var item = (Item)RawStore.TryGet(tx, unsafeKey, Map);
-                RawStore.Update(tx, Create(key, "V", out unsafeKey), item.SequenceNumber);
+                var item = (Item)tx.TryGet(unsafeKey, Map);
+                tx.Update(Create(key, "V", out unsafeKey), item.SequenceNumber);
 
-                await tx.CommitAsync();
+                await tx.SaveChangesAsync();
             }
 
             AssertGet(unsafeKey, "V", key);
@@ -109,12 +108,12 @@ namespace TestActor
         {
             var unsafeKey = await Add(key, "Value");
 
-            using (var tx = RawStore.BeginTransaction())
+            using (var tx = RawStore.OpenSession())
             {
-                var item = (Item)RawStore.TryGet(tx, unsafeKey, Map);
-                Assert.Throws<COMException>(() => RawStore.TryUpdate(tx, Create(key, "V", out unsafeKey), item.SequenceNumber + 1));
+                var item = (Item)tx.TryGet(unsafeKey, Map);
+                Assert.Throws<COMException>(() => tx.TryUpdate(Create(key, "V", out unsafeKey), item.SequenceNumber + 1));
 
-                await tx.CommitAsync();
+                await tx.SaveChangesAsync();
             }
 
             AssertGet(unsafeKey, "Value", key);
@@ -127,10 +126,10 @@ namespace TestActor
             await Add(key + "1", expected);
             await Add(key + "2", expected);
 
-            using (var tx = RawStore.BeginTransaction())
+            using (var tx = RawStore.OpenSession())
             {
                 var results = new List<object>();
-                RawStore.Enumerate(tx, unsafeKey, Map, o => results.Add(o));
+                tx.Enumerate(unsafeKey, Map, o => results.Add(o));
 
                 var array = results.Cast<Item>().OrderBy(i => i.Key).ToArray();
 
@@ -150,19 +149,19 @@ namespace TestActor
         async Task<IntPtr> Add(string key, string expected)
         {
             IntPtr unsafeKey;
-            using (var tx = RawStore.BeginTransaction())
+            using (var tx = RawStore.OpenSession())
             {
-                RawStore.Add(tx, Create(key, expected, out unsafeKey));
-                await tx.CommitAsync().ConfigureAwait(false);
+                tx.Add(Create(key, expected, out unsafeKey));
+                await tx.SaveChangesAsync().ConfigureAwait(false);
             }
             return unsafeKey;
         }
 
         void AssertGet(IntPtr unsafeKey, string expected, string key)
         {
-            using (var tx = RawStore.BeginTransaction())
+            using (var tx = RawStore.OpenSession())
             {
-                var item = (Item)RawStore.TryGet(tx, unsafeKey, Map);
+                var item = (Item)tx.TryGet(unsafeKey, Map);
 
                 Assert.NotNull(item);
 
