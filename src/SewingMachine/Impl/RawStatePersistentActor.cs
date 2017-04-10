@@ -10,13 +10,13 @@ using Microsoft.ServiceFabric.Actors.Runtime;
 namespace SewingMachine.Impl
 {
     /// <summary>
-    /// The base class for actors accessing its state directly via <see cref="RawStore"/> instead of using <see cref="IActorStateManager"/>.
+    /// The base class for actors accessing its state directly via <see cref="Replica"/> instead of using <see cref="IActorStateManager"/>.
     /// </summary>
     abstract class RawStatePersistentActor : Actor
     {
         static readonly FieldInfo ReplicaField;
 
-        protected RawAccessorToKeyValueStoreReplica RawStore { get; private set; }
+        protected KeyValueStoreReplica Replica { get; private set; }
 
         static RawStatePersistentActor()
         {
@@ -36,7 +36,7 @@ namespace SewingMachine.Impl
 
         void SetReplica(KeyValueStoreReplica replica)
         {
-            RawStore = new RawAccessorToKeyValueStoreReplica(replica);
+            Replica = replica;
         }
 
         public static Task RegisterActorAsync<TActor>(TimeSpan timeout = default(TimeSpan), CancellationToken cancellationToken = default(CancellationToken))
@@ -59,6 +59,11 @@ namespace SewingMachine.Impl
                 });
 
             }, timeout, cancellationToken);
+        }
+
+        protected SewingSession OpenSession()
+        {
+            return new SewingSession(Replica);
         }
     }
 }

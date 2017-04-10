@@ -49,7 +49,7 @@ namespace TestKeyValueStateful
                 rkv = new ReplicaKeyValue(TestKey, new IntPtr((byte*)&i), 4);
             }
 
-            using (var tx = RawStoreReplica.OpenSession())
+            using (var tx = OpenSession())
             {
                 tx.Add(rkv);
                 await tx.SaveChangesAsync();
@@ -75,7 +75,7 @@ namespace TestKeyValueStateful
             }
 
             var sw = Stopwatch.StartNew();
-            using (var tx = RawStoreReplica.OpenSession())
+            using (var tx = OpenSession())
             {
                 // ReSharper disable once ConvertClosureToMethodGroup
                 var item = (Tuple<long, int>)tx.TryGet(TestKey, r => Parse(r));
@@ -97,7 +97,7 @@ namespace TestKeyValueStateful
             return sw.Elapsed;
         }
 
-        static unsafe Tuple<long, int> Parse(RawAccessorToKeyValueStoreReplica.RawItem r)
+        static unsafe Tuple<long, int> Parse(RawItem r)
         {
             return r.Value != IntPtr.Zero ? Tuple.Create(r.SequenceNumber, *(int*)r.Value) : null;
         }

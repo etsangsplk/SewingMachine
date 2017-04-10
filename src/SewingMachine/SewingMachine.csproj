@@ -100,12 +100,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Impl\InternalFabric.cs" />
+    <Compile Include="Impl\Invoker.cs" />
     <Compile Include="KeyValueStatefulService.cs" />
     <Compile Include="KeyValueStateProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RawAccessorToKeyValueStoreReplica.cs" />
+    <Compile Include="SewingSession.cs" />
     <Compile Include="Impl\RawStatePersistentActor.cs" />
     <Compile Include="Impl\ReflectionHelpers.cs" />
+    <Compile Include="RawItem.cs" />
     <Compile Include="ReplicaKeyValue.cs" />
     <Compile Include="Impl\ThrowingActorStateManager.cs" />
     <Compile Include="Impl\Utils.cs" />

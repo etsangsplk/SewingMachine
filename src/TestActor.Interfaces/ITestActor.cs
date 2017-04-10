@@ -14,5 +14,6 @@ namespace TestActor.Interfaces
         Task When_TryUpdate_existent_value_with_wrong_version_should_throw(CancellationToken cancellationToken);
         Task When_TryAdd_should_fail_on_existing_key(CancellationToken cancellationToken);
         Task When_Enumerate_should_go_through_all_prefixed_value(CancellationToken cancellationToken);
+        Task When_registering_BeforeSafe_should_execute_it_when_saving(CancellationToken cancellationToken);
     }
 }

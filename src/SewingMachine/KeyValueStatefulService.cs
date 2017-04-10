@@ -9,7 +9,7 @@ namespace SewingMachine
     /// </summary>
     public abstract class KeyValueStatefulService: StatefulServiceBase
     {
-        readonly Lazy<RawAccessorToKeyValueStoreReplica> raw;
+        readonly Lazy<KeyValueStoreReplica> store;
 
         protected KeyValueStatefulService(StatefulServiceContext serviceContext)
             : this(serviceContext, new KeyValueStateProvider())
@@ -19,9 +19,12 @@ namespace SewingMachine
         protected KeyValueStatefulService(StatefulServiceContext serviceContext, KeyValueStateProvider stateProviderReplica)
             : base(serviceContext, stateProviderReplica)
         {
-            raw = new Lazy<RawAccessorToKeyValueStoreReplica>(() => new RawAccessorToKeyValueStoreReplica(stateProviderReplica.StoreReplica));
+            store = new Lazy<KeyValueStoreReplica>(()=>stateProviderReplica.StoreReplica);
         }
 
-        protected RawAccessorToKeyValueStoreReplica RawStoreReplica => raw.Value;
+        protected SewingSession OpenSession()
+        {
+            return new SewingSession(store.Value);
+        }
     }
 }

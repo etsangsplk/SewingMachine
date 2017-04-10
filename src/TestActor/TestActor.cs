@@ -56,7 +56,7 @@ namespace TestActor
             const string expected = "Value";
             await Add(key, expected);
 
-            using (var tx = RawStore.OpenSession())
+            using (var tx = OpenSession())
             {
                 IntPtr unsafeKey;
                 Assert.False(tx.TryAdd(Create(key, expected, out unsafeKey)));
@@ -68,7 +68,7 @@ namespace TestActor
             IntPtr unsafeKey;
             Create(key, "Value", out unsafeKey);
 
-            using (var tx = RawStore.OpenSession())
+            using (var tx = OpenSession())
             {
                 Assert.False(tx.TryRemove(unsafeKey, 0), "Should not remove non-existing entry");
             }
@@ -81,7 +81,7 @@ namespace TestActor
             IntPtr unsafeKey;
             Create(key, "Value", out unsafeKey);
 
-            using (var tx = RawStore.OpenSession())
+            using (var tx = OpenSession())
             {
                 Assert.Throws(Is.AssignableTo<Exception>(), () => tx.Remove(unsafeKey, 0), "Should not remove non-existing entry");
             }
@@ -93,7 +93,7 @@ namespace TestActor
         {
             var unsafeKey = await Add(key, "Value");
 
-            using (var tx = RawStore.OpenSession())
+            using (var tx = OpenSession())
             {
                 var item = (Item)tx.TryGet(unsafeKey, Map);
                 tx.Update(Create(key, "V", out unsafeKey), item.SequenceNumber);
@@ -108,7 +108,7 @@ namespace TestActor
         {
             var unsafeKey = await Add(key, "Value");
 
-            using (var tx = RawStore.OpenSession())
+            using (var tx = OpenSession())
             {
                 var item = (Item)tx.TryGet(unsafeKey, Map);
                 Assert.Throws<COMException>(() => tx.TryUpdate(Create(key, "V", out unsafeKey), item.SequenceNumber + 1));
@@ -126,7 +126,7 @@ namespace TestActor
             await Add(key + "1", expected);
             await Add(key + "2", expected);
 
-            using (var tx = RawStore.OpenSession())
+            using (var tx = OpenSession())
             {
                 var results = new List<object>();
                 tx.Enumerate(unsafeKey, Map, o => results.Add(o));
@@ -146,10 +146,22 @@ namespace TestActor
             }
         }
 
+        public async Task When_registering_BeforeSafe_should_execute_it_when_saving(CancellationToken cancellationToken)
+        {
+            using (var tx = OpenSession())
+            {
+                var counter = 0;
+                tx.BeforeSave(_ => { counter++; });
+
+                await tx.SaveChangesAsync().ConfigureAwait(false);
+                Assert.AreEqual(1, counter);
+            }
+        }
+
         async Task<IntPtr> Add(string key, string expected)
         {
             IntPtr unsafeKey;
-            using (var tx = RawStore.OpenSession())
+            using (var tx = OpenSession())
             {
                 tx.Add(Create(key, expected, out unsafeKey));
                 await tx.SaveChangesAsync().ConfigureAwait(false);
@@ -159,7 +171,7 @@ namespace TestActor
 
         void AssertGet(IntPtr unsafeKey, string expected, string key)
         {
-            using (var tx = RawStore.OpenSession())
+            using (var tx = OpenSession())
             {
                 var item = (Item)tx.TryGet(unsafeKey, Map);
 
@@ -178,7 +190,7 @@ namespace TestActor
             return new ReplicaKeyValue(k, v, (value.Length + 1) * 2);
         }
 
-        static unsafe object Map(RawAccessorToKeyValueStoreReplica.RawItem arg)
+        static unsafe object Map(RawItem arg)
         {
             var value = new string((char*)arg.Value, 0, arg.ValueLength / 2 - 1);
             var key = new string((char*)arg.Key);
